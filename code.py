@@ -1,60 +1,78 @@
-# Basic EDA Template
-
-# 1. Import libraries
+import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 
-# Optional: pretty plots
-sns.set(style="whitegrid")
+st.set_page_config(page_title="Auto EDA App", layout="wide")
 
-# 2. Load dataset
-df = pd.read_csv("your_dataset.csv")   # or pd.read_excel("file.xlsx")
+st.title("📊 Automated EDA App")
+st.write("Upload any CSV file and explore it instantly!")
 
-# 3. Quick overview
-print("Shape:", df.shape)
-print("Columns:", df.columns.tolist())
-print("\nData Types:\n", df.dtypes)
-print("\nMissing Values:\n", df.isnull().sum())
-print("\nBasic Stats:\n", df.describe(include="all"))
+# -------------------------------
+# Upload dataset
+# -------------------------------
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
-# 4. Duplicate check
-print("Duplicates:", df.duplicated().sum())
+if uploaded_file is not None:
+    # Read dataset
+    df = pd.read_csv(uploaded_file)
 
-# 5. Correlation matrix (numeric features)
-plt.figure(figsize=(10,6))
-sns.heatmap(df.corr(numeric_only=True), annot=True, cmap="coolwarm", fmt=".2f")
-plt.title("Correlation Heatmap")
-plt.show()
+    # -------------------------------
+    # Dataset Overview
+    # -------------------------------
+    st.subheader("🔍 Dataset Preview")
+    st.write(df.head())
 
-# 6. Univariate analysis
-for col in df.select_dtypes(include=np.number).columns:
-    plt.figure()
-    sns.histplot(df[col].dropna(), kde=True)
-    plt.title(f"Distribution of {col}")
-    plt.show()
+    st.subheader("📐 Shape of Dataset")
+    st.write(f"Rows: {df.shape[0]}, Columns: {df.shape[1]}")
 
-# 7. Categorical features distribution
-for col in df.select_dtypes(include="object").columns:
-    plt.figure()
-    sns.countplot(y=df[col], order=df[col].value_counts().index)
-    plt.title(f"Category Counts for {col}")
-    plt.show()
+    st.subheader("📝 Column Info")
+    buffer = []
+    df.info(buf=buffer)
+    s = "\n".join(buffer)
+    st.text(s)
 
-# 8. Outlier detection (boxplots for numeric variables)
-for col in df.select_dtypes(include=np.number).columns:
-    plt.figure()
-    sns.boxplot(x=df[col])
-    plt.title(f"Boxplot of {col}")
-    plt.show()
+    st.subheader("📊 Summary Statistics")
+    st.write(df.describe(include="all"))
 
-# 9. Pairwise relationships (only if dataset is small)
-sns.pairplot(df.select_dtypes(include=np.number))
-plt.show()
+    # -------------------------------
+    # Missing values
+    # -------------------------------
+    st.subheader("🚨 Missing Values")
+    st.write(df.isnull().sum())
 
-# 10. Missing value heatmap
-plt.figure(figsize=(10,6))
-sns.heatmap(df.isnull(), cbar=False, cmap="viridis")
-plt.title("Missing Values Heatmap")
-plt.show()
+    # -------------------------------
+    # Categorical columns
+    # -------------------------------
+    st.subheader("📂 Categorical Features Distribution")
+    cat_cols = df.select_dtypes(include="object").columns
+    for col in cat_cols:
+        st.write(f"**{col}**")
+        fig, ax = plt.subplots()
+        sns.countplot(y=df[col], order=df[col].value_counts().index, ax=ax)
+        st.pyplot(fig)
+
+    # -------------------------------
+    # Numerical columns
+    # -------------------------------
+    st.subheader("📈 Numerical Features Distribution")
+    num_cols = df.select_dtypes(include=['float64', 'int64']).columns
+    for col in num_cols:
+        st.write(f"**{col}**")
+        fig, ax = plt.subplots()
+        sns.histplot(df[col].dropna(), kde=True, ax=ax)
+        st.pyplot(fig)
+
+    # -------------------------------
+    # Correlation heatmap
+    # -------------------------------
+    if len(num_cols) > 1:
+        st.subheader("🔥 Correlation Heatmap")
+        fig, ax = plt.subplots(figsize=(10,6))
+        sns.heatmap(df[num_cols].corr(), annot=True, cmap="coolwarm", ax=ax)
+        st.pyplot(fig)
+
+else:
+    st.info("👆 Please upload a CSV file to start EDA.")
+
+  
