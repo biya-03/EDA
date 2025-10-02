@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from io import BytesIO
-from wordcloud import WordCloud
 
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
@@ -80,24 +79,6 @@ if uploaded_file is not None:
         sns.pairplot(numeric_df)
         st.pyplot()
 
-    # ---- Word Cloud ----
-    st.subheader("☁️ Word Cloud (Text Data)")
-    text_columns = df.select_dtypes(include="object").columns
-    if len(text_columns) > 0:
-        text_col = st.selectbox("Select a text column", text_columns)
-        text_data = " ".join(str(val) for val in df[text_col].dropna())
-
-        if text_data.strip():
-            wordcloud = WordCloud(width=800, height=400, background_color="white").generate(text_data)
-            fig, ax = plt.subplots(figsize=(10,5))
-            ax.imshow(wordcloud, interpolation="bilinear")
-            ax.axis("off")
-            st.pyplot(fig)
-        else:
-            st.info("Selected column is empty, cannot generate Word Cloud.")
-    else:
-        st.info("No text columns available for Word Cloud.")
-
     # ---- Download Cleaned Dataset ----
     st.subheader("💾 Download Cleaned Dataset")
     buffer = BytesIO()
@@ -106,3 +87,8 @@ if uploaded_file is not None:
 
 else:
     st.warning("👆 Please upload a CSV file to begin.")
+
+
+    
+   
+        
