@@ -2,12 +2,9 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from io import BytesIO
 
-st.set_option('deprecation.showPyplotGlobalUse', False)
-
-# Title
-st.title("📊 Advanced E-commerce EDA Dashboard")
+# App title
+st.title("📊 E-commerce Data Exploration App")
 
 # Upload CSV
 uploaded_file = st.file_uploader("Upload your CSV dataset", type=["csv"])
@@ -16,53 +13,62 @@ if uploaded_file is not None:
     # Read dataset
     df = pd.read_csv(uploaded_file)
 
-    # ---- Sidebar Options ----
-    st.sidebar.header("⚙️ Data Cleaning Options")
-    if st.sidebar.checkbox("Drop Duplicates"):
-        df = df.drop_duplicates()
+    # ---- Data Cleaning ----
+    st.subheader("🧹 Data Cleaning")
+    st.write("Dropping duplicates and handling empty rows...")
+    df = df.drop_duplicates()
+    df = df.dropna(how="all")
 
-    missing_option = st.sidebar.selectbox("Handle Missing Values", 
-                                          ["Do Nothing", "Drop Rows", "Fill with Mean", "Fill with Mode"])
-
-    if missing_option == "Drop Rows":
-        df = df.dropna()
-    elif missing_option == "Fill with Mean":
-        df = df.fillna(df.mean(numeric_only=True))
-    elif missing_option == "Fill with Mode":
-        for col in df.columns:
-            df[col] = df[col].fillna(df[col].mode()[0])
-
-    # ---- Dataset Preview ----
+    # ---- Preview Data ----
     st.subheader("👀 Data Preview")
-    st.write("First 5 Rows:")
+    st.write("First 5 Rows of Data:")
     st.dataframe(df.head())
-    st.write("Last 5 Rows:")
+
+    st.write("Last 5 Rows of Data:")
     st.dataframe(df.tail())
 
-    # ---- Data Info ----
-    st.subheader("ℹ️ Dataset Information")
-    st.write(f"**Shape:** {df.shape}")
-    st.write(f"**Columns:** {df.columns.tolist()}")
-    st.write("**Summary Statistics:**")
-    st.write(df.describe(include="all"))
+    # ---- Shape of Dataset ----
+    st.subheader("📐 Shape of Dataset")
+    st.write(f"Rows: {df.shape[0]}, Columns: {df.shape[1]}")
+
+    # ---- Data Types ----
+    st.subheader("🔠 Data Types of Columns")
+    st.write(df.dtypes)
 
     # ---- Missing Values ----
-    st.subheader("❌ Missing Values")
-    st.write(df.isnull().sum())
+    st.subheader("❌ Missing Values Check")
+    missing = df.isnull().sum()
+    missing_pct = (missing / len(df) * 100).round(2)
+    st.write(pd.DataFrame({"Missing Count": missing, "Missing %": missing_pct}))
 
-    # ---- Column Explorer ----
-    st.subheader("🔍 Explore a Column")
-    column = st.selectbox("Select Column", df.columns)
+    # ---- Duplicate Records ----
+    st.subheader("📋 Duplicate Records Check")
+    dup_count = df.duplicated().sum()
+    st.write(f"Duplicate Rows: {dup_count}")
 
-    if df[column].dtype == "object":
-        st.write(df[column].value_counts().head(10))
-        fig, ax = plt.subplots()
-        df[column].value_counts().head(10).plot(kind="bar", ax=ax)
-        st.pyplot(fig)
-    else:
-        fig, ax = plt.subplots()
-        sns.histplot(df[column], kde=True, ax=ax)
-        st.pyplot(fig)
+    # ---- Unique Values ----
+    st.subheader("🔍 Unique Values per Column")
+    unique_counts = df.nunique()
+    st.write(unique_counts)
+
+    # ---- Summary Statistics ----
+    st.subheader("📈 Summary Statistics")
+    st.write("Standard Describe:")
+    st.write(df.describe(include="all"))
+
+    st.write("Extended Summary (Mean, Median, Mode, Std, Min, Max, Quantiles):")
+    summary_stats = pd.DataFrame({
+        "mean": df.mean(numeric_only=True),
+        "median": df.median(numeric_only=True),
+        "mode": df.mode().iloc[0],
+        "std": df.std(numeric_only=True),
+        "min": df.min(numeric_only=True),
+        "max": df.max(numeric_only=True),
+        "25%": df.quantile(0.25, numeric_only=True),
+        "50%": df.quantile(0.50, numeric_only=True),
+        "75%": df.quantile(0.75, numeric_only=True),
+    })
+    st.write(summary_stats)
 
     # ---- Correlation Heatmap ----
     st.subheader("🔥 Correlation Heatmap")
@@ -74,21 +80,5 @@ if uploaded_file is not None:
     else:
         st.info("No numeric columns found for correlation heatmap.")
 
-    # ---- Pairplot ----
-    if st.checkbox("Show Pairplot (Numeric Features Only)"):
-        sns.pairplot(numeric_df)
-        st.pyplot()
-
-    # ---- Download Cleaned Dataset ----
-    st.subheader("💾 Download Cleaned Dataset")
-    buffer = BytesIO()
-    df.to_csv(buffer, index=False)
-    st.download_button("Download CSV", buffer.getvalue(), "cleaned_dataset.csv", "text/csv")
-
 else:
     st.warning("👆 Please upload a CSV file to begin.")
-
-
-    
-   
-        
