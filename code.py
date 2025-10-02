@@ -19,14 +19,18 @@ if uploaded_file is not None:
     df = df.dropna(how="all")
     st.write("✅ Duplicates removed & empty rows dropped.")
 
-    # ---- Data Preview ----
+    # ---- Revenue Calculation ----
+    df["Revenue"] = df["quantity"] * df["price"] * (1 - df["discount"])
+    df["order_date"] = pd.to_datetime(df["order_date"], errors="coerce")
+
+    # ---- Dataset Preview ----
     st.subheader("👀 Dataset Preview")
     st.write("**First 5 Rows:**")
     st.dataframe(df.head())
     st.write("**Last 5 Rows:**")
     st.dataframe(df.tail())
 
-    # ---- Data Info ----
+    # ---- Dataset Info ----
     st.subheader("📋 Dataset Information")
     st.write(f"Shape: {df.shape}")
     st.write("Columns:", df.columns.tolist())
@@ -47,63 +51,81 @@ if uploaded_file is not None:
     else:
         st.info("No numeric columns for correlation heatmap.")
 
-    # ---- Revenue Calculations ----
-    if 'Revenue' in df.columns:
-        # Ensure Date column is datetime
-        if 'Date' in df.columns:
-            df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+    # ---- 📈 Daily Revenue Trend ----
+    st.subheader("📈 Daily Revenue Trend")
+    daily_revenue = df.groupby(df["order_date"].dt.date)["Revenue"].sum()
+    fig, ax = plt.subplots(figsize=(10, 4))
+    daily_revenue.plot(ax=ax)
+    ax.set_title("Daily Revenue Trend")
+    ax.set_ylabel("Revenue")
+    st.pyplot(fig)
 
-        # 📈 Daily Revenue Trend
-        if 'Date' in df.columns:
-            st.subheader("📈 Daily Revenue Trend")
-            daily_revenue = df.groupby('Date')['Revenue'].sum()
-            fig, ax = plt.subplots(figsize=(10, 4))
-            daily_revenue.plot(ax=ax)
-            ax.set_title("Daily Revenue Trend")
-            ax.set_ylabel("Revenue")
-            st.pyplot(fig)
+    # ---- 💰 Revenue by Category ----
+    st.subheader("💰 Revenue by Category")
+    category_revenue = df.groupby("category")["Revenue"].sum().sort_values(ascending=False)
+    fig, ax = plt.subplots(figsize=(8, 4))
+    category_revenue.plot(kind='bar', ax=ax, color='skyblue')
+    ax.set_title("Revenue by Category")
+    st.pyplot(fig)
 
-        # 💰 Revenue by Category
-        if 'Category' in df.columns:
-            st.subheader("💰 Revenue by Category")
-            category_revenue = df.groupby('Category')['Revenue'].sum().sort_values(ascending=False)
-            fig, ax = plt.subplots(figsize=(8, 4))
-            category_revenue.plot(kind='bar', ax=ax, color='skyblue')
-            ax.set_title("Revenue by Category")
-            st.pyplot(fig)
+    # ---- 🌍 Region vs Category Heatmap ----
+    st.subheader("🌍 Region vs. Category Revenue (Heatmap)")
+    pivot_table = df.pivot_table(values='Revenue', index='region', columns='category', aggfunc='sum', fill_value=0)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.heatmap(pivot_table, cmap="YlGnBu", annot=True, fmt=".0f", ax=ax)
+    st.pyplot(fig)
 
-        # 🌍 Region vs Category Revenue Heatmap
-        if 'Region' in df.columns and 'Category' in df.columns:
-            st.subheader("🌍 Region vs. Category Revenue (Heatmap)")
-            pivot_table = df.pivot_table(values='Revenue', index='Region', columns='Category', aggfunc='sum', fill_value=0)
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.heatmap(pivot_table, cmap="YlGnBu", annot=True, fmt=".0f", ax=ax)
-            st.pyplot(fig)
+    # ---- 💳 Payment Method Distribution ----
+    st.subheader("💳 Payment Method Distribution")
+    payment_counts = df["payment_method"].value_counts()
+    fig, ax = plt.subplots()
+    payment_counts.plot(kind='pie', autopct='%1.1f%%', startangle=90, ax=ax)
+    ax.set_ylabel("")
+    ax.set_title("Payment Methods")
+    st.pyplot(fig)
 
-        # 💳 Payment Method Distribution
-        if 'Payment_Method' in df.columns:
-            st.subheader("💳 Payment Method Distribution")
-            payment_counts = df['Payment_Method'].value_counts()
-            fig, ax = plt.subplots()
-            payment_counts.plot(kind='pie', autopct='%1.1f%%', startangle=90, ax=ax)
-            ax.set_ylabel("")
-            ax.set_title("Payment Methods")
-            st.pyplot(fig)
+    # ---- 🏆 Top 10 Products by Revenue ----
+    st.subheader("🏆 Top 10 Products by Revenue")
+    top_products = df.groupby("product_id")["Revenue"].sum().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots(figsize=(8, 4))
+    top_products.plot(kind='bar', ax=ax, color='orange')
+    ax.set_title("Top 10 Products by Revenue")
+    st.pyplot(fig)
 
-        # 🏆 Top 10 Products by Revenue
-        if 'Product' in df.columns:
-            st.subheader("🏆 Top 10 Products by Revenue")
-            top_products = df.groupby('Product')['Revenue'].sum().sort_values(ascending=False).head(10)
-            fig, ax = plt.subplots(figsize=(8, 4))
-            top_products.plot(kind='bar', ax=ax, color='orange')
-            ax.set_title("Top 10 Products by Revenue")
-            st.pyplot(fig)
+    # ---- 🎯 Discount Impact on Sales ----
+    st.subheader("🎯 Discount Impact on Revenue")
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.scatterplot(x="discount", y="Revenue", data=df, alpha=0.6)
+    ax.set_title("Discount vs Revenue")
+    st.pyplot(fig)
 
-    else:
-        st.warning("⚠️ 'Revenue' column not found in dataset. Please make sure your dataset contains Revenue, Category, Product, Date, Region, and Payment_Method columns.")
+    # ---- 👥 Top Customers by Revenue ----
+    st.subheader("👥 Top 10 Customers by Revenue")
+    top_customers = df.groupby("customer_id")["Revenue"].sum().sort_values(ascending=False).head(10)
+    fig, ax = plt.subplots(figsize=(8, 4))
+    top_customers.plot(kind='bar', ax=ax, color='green')
+    ax.set_title("Top 10 Customers by Revenue")
+    st.pyplot(fig)
+
+    # ---- 📦 Orders Trend ----
+    st.subheader("📦 Number of Orders Over Time")
+    orders_trend = df.groupby(df["order_date"].dt.date)["order_id"].count()
+    fig, ax = plt.subplots(figsize=(10, 4))
+    orders_trend.plot(ax=ax, color='purple')
+    ax.set_title("Orders Trend Over Time")
+    ax.set_ylabel("Number of Orders")
+    st.pyplot(fig)
 
 else:
     st.info("👆 Upload a CSV file to start exploring your data.")
+
+    
+
+ 
+
+        
+           
+            
 
   
 
